@@ -2,9 +2,12 @@
 
 #include <Windows.h>
 #include <iostream>
+#include <string>
 
 #define PRINT_PROP(x, y) std::cout << "\t0x" << std::hex << x << "\t\t" << y << std::endl;
 #define PRINT_PROP_SHORT(x, y) std::cout << "\t0x" << std::hex << x << "\t" << y << std::endl;
+#define PRINT_PROP_FAR(x, y) std::cout << "\t\t0x" << std::hex << x << "\t\t" << y << std::endl;
+#define PRINT_PROP_MID(x, y) std::cout << "\t\t0x" << std::hex << x << "\t" << y << std::endl;
 
 namespace PEMan
 {

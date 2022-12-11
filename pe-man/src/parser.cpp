@@ -115,7 +115,7 @@ namespace PEMan {
 			PRINT_PROP(m_OptionalHeader64.Win32VersionValue, "Reserved and must be 0");
 			PRINT_PROP(m_OptionalHeader64.SizeOfImage, "Size of the image including all headers in bytes");
 			PRINT_PROP(m_OptionalHeader64.SizeOfHeaders, "Sum of e_lfanew, signature, file header size, optional header size and section sizes");
-			PRINT_PROP_SHORT(m_OptionalHeader64.CheckSum, "Image checksum validated at runtime for drivers, DLLs loaded at boot time and DLLs loaded into a critical system");
+			PRINT_PROP(m_OptionalHeader64.CheckSum, "Image checksum validated at runtime for drivers, DLLs loaded at boot time and DLLs loaded into a critical system");
 			PRINT_PROP(m_OptionalHeader64.Subsystem, "The subsystem required to run the image e.g., Windows GUI, XBOX etc");
 			PRINT_PROP(m_OptionalHeader64.DllCharacteristics, "DLL characteristics of the image");
 			PRINT_PROP_SHORT(m_OptionalHeader64.SizeOfStackReserve, "Size of stack reserve in bytes");
@@ -148,7 +148,7 @@ namespace PEMan {
 			PRINT_PROP(m_OptionalHeader32.Win32VersionValue, "Reserved and must be 0");
 			PRINT_PROP(m_OptionalHeader32.SizeOfImage, "Size of the image including all headers in bytes");
 			PRINT_PROP(m_OptionalHeader32.SizeOfHeaders, "Sum of e_lfanew, signature, file header size, optional header size and section sizes");
-			PRINT_PROP_SHORT(m_OptionalHeader32.CheckSum, "Image checksum validated at runtime for drivers, DLLs loaded at boot time and DLLs loaded into a critical system");
+			PRINT_PROP(m_OptionalHeader32.CheckSum, "Image checksum validated at runtime for drivers, DLLs loaded at boot time and DLLs loaded into a critical system");
 			PRINT_PROP(m_OptionalHeader32.Subsystem, "The subsystem required to run the image e.g., Windows GUI, XBOX etc");
 			PRINT_PROP(m_OptionalHeader32.DllCharacteristics, "DLL characteristics of the image");
 			PRINT_PROP_SHORT(m_OptionalHeader32.SizeOfStackReserve, "Size of stack reserve in bytes");
@@ -166,15 +166,67 @@ namespace PEMan {
 		PRINT_PROP(m_NTHeader->OptionalHeader.DataDirectory[1].Size, "Size of import table");
 
 		std::cout << std::endl << "------- SECTION HEADERS -------" << std::endl;
-		DWORD64 sectionLocation = (DWORD64)m_NTHeader + sizeof(DWORD64) + (DWORD64)(sizeof(IMAGE_FILE_HEADER)) + (DWORD64)m_NTHeader->FileHeader.SizeOfOptionalHeader;
-		DWORD64 sectionSize = (DWORD64)(sizeof(PIMAGE_SECTION_HEADER));
+		DWORD64 sectionLocation = (DWORD64)m_NTHeader + sizeof(DWORD) + (DWORD64)(sizeof(IMAGE_FILE_HEADER)) + (DWORD64)m_NTHeader->FileHeader.SizeOfOptionalHeader;
+		DWORD64 sectionSize = (DWORD64)(sizeof(IMAGE_SECTION_HEADER));
 
 		DWORD64 importDirectoryRVA = m_NTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
 
+		PIMAGE_SECTION_HEADER currentSectionHeader = nullptr;
+		PIMAGE_SECTION_HEADER importSection = nullptr;
+
 		for (int i = 0; i < m_NTHeader->FileHeader.NumberOfSections; i++)
 		{
-			
+			currentSectionHeader = (PIMAGE_SECTION_HEADER)sectionLocation;
+			std::cout << "\t" << currentSectionHeader->Name << std::endl;
+			PRINT_PROP_FAR(currentSectionHeader->Misc.VirtualSize, "Virtual size");
+			PRINT_PROP_FAR(currentSectionHeader->VirtualAddress, "Virtual address");
+			PRINT_PROP_FAR(currentSectionHeader->SizeOfRawData, "Size of raw data");
+			PRINT_PROP_FAR(currentSectionHeader->PointerToRawData, "Pointer to raw data");
+			PRINT_PROP_FAR(currentSectionHeader->PointerToRelocations, "Pointer to relocations");
+			PRINT_PROP_FAR(currentSectionHeader->PointerToLinenumbers, "Pointer to line numbers");
+			PRINT_PROP_MID(currentSectionHeader->Characteristics, "Characteristics");
+
+			if (importDirectoryRVA >= (DWORD64)currentSectionHeader->VirtualAddress && importDirectoryRVA < (DWORD64)currentSectionHeader->VirtualAddress + (DWORD64)currentSectionHeader->Misc.VirtualSize)
+			{
+				importSection = currentSectionHeader;
+			}
+					
+			sectionLocation += sectionSize;
 		}
+		
+		if (!importDirectoryRVA || importSection == nullptr) {
+			return;
+		}
+
+		DWORD64 importTableOffset = (DWORD64)m_DosHeader + importSection->PointerToRawData;
+		PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)(importTableOffset + ((DWORD64)m_NTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress - (DWORD64)importSection->VirtualAddress));
+
+		std::cout << std::endl << "------- DLL IMPORTS -------" << std::endl;
+
+		DWORD64 thunk;
+		PIMAGE_THUNK_DATA thunkData;
+		
+		for (; importDescriptor->Name != 0; importDescriptor++)
+		{
+			std::cout << "\t" << reinterpret_cast<char*>(importTableOffset + ((DWORD64)importDescriptor->Name - (DWORD64)importSection->VirtualAddress)) << std::endl;
+			thunk = importDescriptor->OriginalFirstThunk == 0 ? importDescriptor->FirstThunk : importDescriptor->OriginalFirstThunk;
+			thunkData = (PIMAGE_THUNK_DATA)(importTableOffset + (thunk - importSection->VirtualAddress));
+
+			for (; thunkData->u1.AddressOfData != 0; thunkData++)
+			{
+				if (thunkData->u1.AddressOfData > 0x80000000)
+				{
+					PRINT_PROP((WORD)thunkData->u1.AddressOfData, "Ordinal");
+				}
+				else
+				{
+					std::cout << "\t\t" << reinterpret_cast<char*>(importTableOffset + (thunkData->u1.AddressOfData - importSection->VirtualAddress + 2)) << std::endl;
+				}
+			}
+		}
+
+		
+
 		
 	}
 

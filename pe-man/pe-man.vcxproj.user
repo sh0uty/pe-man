@@ -12,7 +12,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-f C:\Users\lukeo\Downloads\wdksetup.exe</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-f C:\Users\lukeo\Documents\Repos\s0c2\bin\Release-windows-x86_64\s0c2\s0c2.exe</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

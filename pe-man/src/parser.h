@@ -12,6 +12,7 @@ namespace PEMan
 
 	private:
 		const char* m_Filename;
+		bool m_64Bit;
 		PIMAGE_DOS_HEADER m_DosHeader;
 		PIMAGE_NT_HEADERS m_NTHeader;
 		PIMAGE_FILE_HEADER m_FileHeader;
